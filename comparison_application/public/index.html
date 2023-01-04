@@ -1,0 +1,474 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Spotify Playlist Comparison</title>
+    <link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <style type="text/css">
+      #login, #loggedin {
+        display: none;
+      }
+      .text-overflow {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        width: 500px;
+      }
+
+      table, th, td {
+        border: 1px solid black;
+        word-wrap: break-word;
+        max-width: 35vw;
+        margin-top: 10px;
+      }
+
+      .mt-10 {
+        margin-top: 10px;
+      }
+
+      .mt-5 {
+        margin-top: 5px;
+      }
+
+      .width-half {
+        width: 50%;
+      }
+
+      #comparePlaylists {
+        background-color: #4CAF50; /* Green */
+        border: 2px solid black;
+        border-radius: 30px;
+        color: white;
+        padding: 10px 25px;
+        font-size: 20px;
+        transition-duration: .4s;
+        box-shadow: 0 6px #999;
+      }
+
+      #comparePlaylists:hover {
+        background-color: darkgreen;
+      }
+
+      #comparePlaylists:active {
+        background-color: darkgreen;
+        box-shadow: 0 3px #666;
+        transform: translateY(4px);
+      }
+
+      .track-table {
+        display: grid;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="container">
+      <div id="login">
+        <h1>My Spotify Playlist Comparison App</h1>
+        <a href="/login" class="btn btn-primary">Log in with Spotify</a>
+      </div>
+      <div id="loggedin">
+        <div id="user-profile">
+        </div>
+        <div id="oauth">
+        </div>
+        <button class="btn btn-default" id="obtain-new-token">Obtain new token using the refresh token</button>
+        <div id="parent">
+          <div id="compareSection" class="mt-10">
+            <div id="compareButton" style="text-align: center" hidden>
+              <button class="btn btn-default" id="comparePlaylists" onclick="comparePlaylists()">Compare the playlists!</button>
+            </div>
+            <div id="compareResultsCount" class="mt-5" style="text-align: center" hidden>
+            </div>
+            <div id="compareResultsMyTracksHeader" class="width-half" style="float: left;" hidden>
+              <h3>
+                Unique tracks in my playlist:
+              </h3>
+              <div id="compareResultsMyTracks" class="track-table"></div>
+            </div>
+            <div id="compareResultsOtherTracksHeader" class="width-half" style="float: right;" hidden>
+              <h3>
+                Unique tracks in the other playlist:
+              </h3>
+              <div id="compareResultsOtherTracks" class="track-table"></div>
+            </div>
+          </div>
+          <div id="playlistSection" style="clear: both;">
+            <div id="myPlaylistHeader" class="width-half" style="float: left;">
+              <h3 style="text-align: center;">My Playlists</h3>
+              <button class="btn btn-default" id="get-my-playlists">Get my playlists</button>
+              <br/>
+              <dl class="dl-horizontal">
+                <select id="playlistSelect" name="playlistSelect" class="mt-5" onchange="getPlaylistTracks(this, 'me')" hidden required>
+                  <option value="">Select a playlist</option>
+                </select>
+                <div id="tracks" class="track-table">
+                </div>
+              </dl>
+            </div>
+            <div id="otherPlaylistHeader" class="width-half" style="float: right;">
+              <h3 style="text-align: center;">Other Playlist</h3>
+              <input type="search" id="userIdSearch" placeholder="User ID">
+              <button class="btn btn-default" id="get-other-playlists">Get other playlists</button>
+              <br/>
+              <dl class="dl-horizontal">
+                <select id="otherPlaylistSelect" name="otherPlaylistSelect" class="mt-5" onchange="getPlaylistTracks(this, 'other')" hidden required>
+                  <option value="">Select a playlist</option>
+                </select>
+                <div id="otherTracks" class="track-table">
+                </div>
+              </dl>
+            </div>
+          </div>
+      </div>
+      </div>
+    </div>
+
+    <script id="user-profile-template" type="text/x-handlebars-template">
+      <h3>Logged in as {{display_name}}</h3>
+      <div class="media">
+        <div class="pull-left">
+          <img class="media-object" width="100" src="{{images.0.url}}" />
+        </div>
+        <div class="media-body">
+          <dl class="dl-horizontal">
+            <dt>Display name</dt><dd class="clearfix">{{display_name}}</dd>
+            <dt>Id</dt><dd>{{id}}</dd>
+            <dt>Email</dt><dd>{{email}}</dd>
+            <dt>Spotify URI</dt><dd><a href="{{external_urls.spotify}}">{{external_urls.spotify}}</a></dd>
+            <!-- <dt>Link</dt><dd><a href="{{href}}">{{href}}</a></dd>
+            <dt>Profile Image</dt><dd class="clearfix"><a href="{{images.0.url}}">{{images.0.url}}</a></dd>
+            <dt>Country</dt><dd>{{country}}</dd> -->
+          </dl>
+        </div>
+      </div>
+    </script>
+
+    <script id="oauth-template" type="text/x-handlebars-template">
+      <h4>oAuth info</h4>
+      <dl class="dl-horizontal">
+        <dt>Access token</dt><dd class="text-overflow">{{access_token}}</dd>
+        <dt>Refresh token</dt><dd class="text-overflow">{{refresh_token}}</dd>
+      </dl>
+    </script>
+
+    <script src="//cdnjs.cloudflare.com/ajax/libs/handlebars.js/2.0.0-alpha.1/handlebars.min.js"></script>
+    <script src="http://code.jquery.com/jquery-1.10.1.min.js"></script>
+    <script>
+      // init variables
+      let userPlaylists = null;
+      let my_access_token = null;
+      
+      /**
+       * Retrieve the tracks for the selected playlist
+       * @return Object
+       */
+        function getPlaylistTracks(selectedPlaylist, whichUser) {
+          console.log("Selected playlist id = " + selectedPlaylist.value);
+          let tracks = null;
+
+            $.ajax({
+              url: '/get_playlist_tracks',
+              data: {
+                'access_token': this.my_access_token,
+                'id': selectedPlaylist.value
+              }
+            }).done(function(data) {
+                tracks = data.tracks;
+                console.log("Playlist tracks = ", tracks.length);
+
+                let tracksElement = document.getElementById("tracks");
+                if (whichUser==='other') {
+                  tracksElement = document.getElementById("otherTracks");
+                  window.otherUserTracks = tracks;
+                } else {
+                  window.myTracks = tracks;
+                }
+
+                tracksElement.innerHTML = 'Track Count = ' + tracks.length;
+
+                const tbl = createTrackTable(tracks);
+
+                // appends <table> into <body>
+                tracksElement.appendChild(tbl);
+
+                // Unhide Comparison button once both user's tracks are loaded
+                let myTracksElement = document.getElementById("tracks");
+                let otherTracksElement = document.getElementById("otherTracks");
+                // console.log(myTracksElement.innerText);
+                // console.log(otherTracksElement.innerText);
+
+                if (myTracksElement.innerText && otherTracksElement.innerText) {
+                  let compareButton = document.getElementById("compareButton");
+                  compareButton.removeAttribute("hidden");
+                }
+            });
+        };
+
+       /**
+       * Compare the given playlists
+       * @return Object
+       */
+        function comparePlaylists() {
+
+          // Compare the plauylists, show what my playlist has that the other does not
+          let myFilteredList = filterLists(window.myTracks, window.otherUserTracks);
+          let resultsMyTrackEl = document.getElementById("compareResultsMyTracksHeader");
+          resultsMyTrackEl.hidden = false;
+          const myTbl = createTrackTable(myFilteredList);
+          let myTrackTable = document.querySelector("#compareResultsMyTracksHeader > div");
+          myTrackTable.innerHTML = '';
+          myTrackTable.appendChild(myTbl);
+
+          // Compare the plauylists, show what the other playlist has that mine does not
+          let otherFilteredList = filterLists(window.otherUserTracks, window.myTracks);
+          let resultsOtherTrackEl = document.getElementById("compareResultsOtherTracksHeader");
+          //resultsOtherTrackEl.innerHTML = '';
+          resultsOtherTrackEl.hidden = false;
+          const otherTbl = createTrackTable(otherFilteredList);
+          let otherTrackTable = document.querySelector("#compareResultsOtherTracksHeader > div");
+          otherTrackTable.innerHTML = '';
+          otherTrackTable.appendChild(otherTbl);
+
+          // Count the differences
+          let trackDiff = myFilteredList.length + otherFilteredList.length;
+          console.log(trackDiff);
+          let resultsCountEl = document.getElementById("compareResultsCount");
+          resultsCountEl.innerHTML = "<h4>Number of track differenece = " + trackDiff + "<h4>";
+          resultsCountEl.hidden = false;
+        }
+
+       /**
+       * Compare two lists of objects
+       * @return Object of the differences
+       */
+        function filterLists(originalArray, itemsToBeRemoved) {
+          const filteredArray = [];
+          for (let i = 0; i < originalArray.length; i++) {
+            let isSubset = false;
+            for (let j = 0; j < itemsToBeRemoved.length; j++) {
+              // check if whole object is a subset of the object in itemsToBeRemoved
+              if (Object.keys(originalArray[i]).every(key => originalArray[i][key] === itemsToBeRemoved[j][key])) {
+                isSubset = true;
+              }
+            }
+            if (!isSubset) {
+              filteredArray.push(originalArray[i]);
+            }
+          }
+          return filteredArray;
+        }
+
+        function createTrackTable(tracks) {
+          const tbl = document.createElement("table");
+
+          var header = tbl.createTHead();
+          var row = header.insertRow(0);
+          var col1 = row.insertCell(0);
+          col1.innerHTML = "<b>Track Name</b>";
+          var col2 = row.insertCell(1);
+          col2.innerHTML = "<b>Artist</b>";
+          
+          const tblBody = document.createElement("tbody");
+
+          for (var i = 0; i < tracks.length; i++) {
+
+            // creates a table row
+            const row = document.createElement("tr");
+
+            let cell1 = document.createElement("td");
+            let cellText = document.createTextNode(`${tracks[i].trackName}`);
+            cell1.appendChild(cellText);
+            row.appendChild(cell1);
+
+            cellText = document.createTextNode(`${tracks[i].artist}`);
+            let cell2 = document.createElement("td");
+            cell2.appendChild(cellText);
+            row.appendChild(cell2);
+
+            // add the row to the end of the table body
+            tblBody.appendChild(row);
+          }
+
+            // put the <tbody> in the <table>
+            tbl.appendChild(tblBody);
+
+            return tbl;
+        }
+
+      (function() {
+
+        /**
+         * Obtains parameters from the hash of the URL
+         * @return Object
+         */
+        function getHashParams() {
+          var hashParams = {};
+          var e, r = /([^&;=]+)=?([^&;]*)/g,
+              q = window.location.hash.substring(1);
+          while ( e = r.exec(q)) {
+             hashParams[e[1]] = decodeURIComponent(e[2]);
+          }
+          return hashParams;
+        }
+
+        var userProfileSource = document.getElementById('user-profile-template').innerHTML,
+            userProfileTemplate = Handlebars.compile(userProfileSource),
+            userProfilePlaceholder = document.getElementById('user-profile');
+
+        var oauthSource = document.getElementById('oauth-template').innerHTML,
+            oauthTemplate = Handlebars.compile(oauthSource),
+            oauthPlaceholder = document.getElementById('oauth');
+
+        var params = getHashParams();
+
+        var access_token = params.access_token,
+            refresh_token = params.refresh_token,
+            error = params.error;
+
+        // Set global variable
+        this.my_access_token = access_token;
+
+        if (error) {
+          alert('There was an error during the authentication');
+        } else {
+          if (access_token) {
+            // render oauth info
+            oauthPlaceholder.innerHTML = oauthTemplate({
+              access_token: access_token,
+              refresh_token: refresh_token,
+            });
+
+            $.ajax({
+                url: 'https://api.spotify.com/v1/me',
+                headers: {
+                  'Authorization': 'Bearer ' + access_token
+                },
+                success: function(response) {
+                  userProfilePlaceholder.innerHTML = userProfileTemplate(response);
+
+                  $('#login').hide();
+                  $('#loggedin').show();
+                }
+            });
+          } else {
+              // render initial screen
+              $('#login').show();
+              $('#loggedin').hide();
+          }
+
+          document.getElementById('obtain-new-token').addEventListener('click', function() {
+            $.ajax({
+              url: '/refresh_token',
+              data: {
+                'refresh_token': refresh_token
+              }
+            }).done(function(data) {
+              access_token = data.access_token;
+              oauthPlaceholder.innerHTML = oauthTemplate({
+                access_token: access_token,
+                refresh_token: refresh_token,
+              });
+            });
+          }, false);
+
+          // Listen for button click for getting own playlists
+          document.getElementById('get-my-playlists').addEventListener('click', function() {
+
+            $.ajax({
+              url: '/get_playlists',
+              data: {
+                'access_token': access_token
+              }
+            }).done(function(data) {
+                this.userPlaylists = data.playlists;
+                console.log("User Playlists Count = ", this.userPlaylists.length);
+
+                // Push playlist names into array
+                let values = [];
+                for (var i = 0; i < this.userPlaylists.length; i++) {
+                  values.push(
+                    {
+                      id: this.userPlaylists[i].id,
+                      name: this.userPlaylists[i].name
+                    }
+                  );
+                }
+                                
+                // Add playlist names to select options
+                var select = document.getElementById("playlistSelect");
+                select.removeAttribute("hidden");
+                select.innerHTML = '';
+                var defaultOption = document.createElement("option");
+                defaultOption.text = "Select a playlist";
+                defaultOption.disabled = true;
+                defaultOption.selected = true;
+                defaultOption.hidden = true;
+                select.appendChild(defaultOption);
+                for (const val of values)
+                {
+                    var option = document.createElement("option");
+                    option.value = val.id; // Set playlist ID
+                    option.text = val.name; // Set playlist Name
+                    select.appendChild(option);
+                }
+                
+                var label = document.createElement("label");
+                label.innerHTML = "Choose your playlist: "
+                label.htmlFor = "playlistSelect";
+            });
+          }, false);
+
+          // Listen for button click for getting own playlists
+          document.getElementById('get-other-playlists').addEventListener('click', function() {
+
+          $.ajax({
+            url: '/get_playlists',
+            data: {
+              'access_token': access_token,
+              'userId': document.getElementById("userIdSearch").value
+            }
+          }).done(function(data) {
+              this.userPlaylists = data.playlists;
+              console.log("User Playlists Count = ", this.userPlaylists.length);
+
+              // Push playlist names into array
+              let values = [];
+              for (var i = 0; i < this.userPlaylists.length; i++) {
+                values.push(
+                  {
+                    id: this.userPlaylists[i].id,
+                    name: this.userPlaylists[i].name
+                  }
+                );
+              }
+                              
+              // Add playlist names to select options
+              var select = document.getElementById("otherPlaylistSelect");
+              select.removeAttribute("hidden");
+              select.innerHTML = '';
+              var defaultOption = document.createElement("option");
+              defaultOption.text = "Select a playlist";
+              defaultOption.disabled = true;
+              defaultOption.selected = true;
+              defaultOption.hidden = true;
+              select.appendChild(defaultOption);
+              for (const val of values)
+              {
+                  var option = document.createElement("option");
+                  option.value = val.id; // Set playlist ID
+                  option.text = val.name; // Set playlist Name
+                  select.appendChild(option);
+              }
+              
+              var label = document.createElement("label");
+              label.innerHTML = "Choose your playlist: "
+              label.htmlFor = "otherPlaylistSelect";
+          });
+          }, false);
+
+        }
+      })();
+    </script>
+  </body>
+</html>
+
