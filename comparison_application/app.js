@@ -8,8 +8,8 @@ var cors = require('cors');
 var querystring = require('querystring');
 var cookieParser = require('cookie-parser');
 
-var client_id = '824f317e91884c5d9762259900ed8aa0'; // Your client id
-var client_secret = '9185899484094bbcbb4d20a6a3a1c93a'; // Your secret
+var client_id = ''; // Your client id
+var client_secret = ''; // Your secret
 var redirect_uri = 'http://localhost:8888/callback'; // Your redirect uri
 
 var SpotifyWebApi = require('spotify-web-api-node');
