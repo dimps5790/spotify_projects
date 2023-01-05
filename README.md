@@ -1,3 +1,17 @@
+# My Spotify Playlist Comparison App
+
+The intent of this project is to compare two Spotify playlists.
+The user will select one of their own playlists first.
+Then they will enter a user ID of another user. The playlists of this user will then be returned.
+They can then select one of these playliosts.
+Once a playlist is selected, the track names and artists will be loaded in a table below.
+After both playlists have been selected, this will display and enable a Comparison button.
+Clicking this will run a comparison on the two selected playlists.
+The comparison results will show the total number of different tracks, and then list in two separate tables the unique tracks from each playlist.
+
+Also of note, this project uses an existing Spotify API and was forked from an example project that guided on how to properly authenticate against the Spotify Web API.
+The authentication example and instructions from this are found below.
+
 # Spotify Accounts Authentication Examples
 
 This project contains basic demos showing the different OAuth 2.0 flows for [authenticating against the Spotify Web API](https://developer.spotify.com/web-api/authorization-guide/).
