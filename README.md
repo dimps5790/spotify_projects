@@ -9,6 +9,8 @@ After both playlists have been selected, this will display and enable a Comparis
 Clicking this will run a comparison on the two selected playlists.
 The comparison results will show the total number of different tracks, and then list in two separate tables the unique tracks from each playlist.
 
+This was done just using a basic app.js and index.html file, nothing fancy. Will have a future update using a better framework, probably Vue.js.
+
 Also of note, this project uses an existing Spotify API and was forked from an example project that guided on how to properly authenticate against the Spotify Web API.
 The authentication example and instructions from this are found below.
 
