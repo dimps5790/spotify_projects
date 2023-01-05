@@ -16,6 +16,8 @@ The authentication example and instructions from this are found below.
 
 One important step: You must fill in the Client ID (client_id) and Client Secret (client_secret) in the app.js. Will need a future update where this is not needed.
 
+![Comparison_screenshot](SpotifyComparison_screenshot.png)
+
 # Spotify Accounts Authentication Examples
 
 This project contains basic demos showing the different OAuth 2.0 flows for [authenticating against the Spotify Web API](https://developer.spotify.com/web-api/authorization-guide/).
