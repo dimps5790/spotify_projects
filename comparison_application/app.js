@@ -1,10 +1,5 @@
 /**
- * This is an example of a basic node.js script that performs
- * the Authorization Code oAuth2 flow to authenticate against
- * the Spotify Accounts.
- *
- * For more information, read
- * https://developer.spotify.com/web-api/authorization-guide/#authorization_code_flow
+ * @author Brian Linden
  */
 
 var express = require('express'); // Express web server framework
@@ -17,16 +12,10 @@ var client_id = '824f317e91884c5d9762259900ed8aa0'; // Your client id
 var client_secret = '9185899484094bbcbb4d20a6a3a1c93a'; // Your secret
 var redirect_uri = 'http://localhost:8888/callback'; // Your redirect uri
 
-var user_access_token = null;
-
 var SpotifyWebApi = require('spotify-web-api-node');
 // credentials are optional
 var spotifyApi = new SpotifyWebApi({
-  // clientId: 'fcecfc72172e4cd267473117a17cbd4d',
-  // clientSecret: 'a6338157c9bb5ac9c71924cb2940e1a7',
-  // redirectUri: 'http://www.example.com/callback'
 });
-
 
 /**
  * Generates a random string containing numbers and letters
@@ -109,8 +98,6 @@ app.get('/callback', function(req, res) {
           json: true
         };
 
-        this.user_access_token = access_token;
-
         // use the access token to access the Spotify Web API
         request.get(options, function(error, response, body) {
 
@@ -154,8 +141,6 @@ app.get('/refresh_token', function(req, res) {
       res.send({
         'access_token': access_token
       });
-
-      this.user_access_token = access_token;
     }
   });
 });
@@ -208,48 +193,6 @@ app.get('/get_playlist_tracks', async function(req, res) {
   res.send({
     'tracks': songs
   });
-
-
-
-
-
-
-  // let trackObj = null;
-  // let trackArr = [];
-  // const offset = 0;
-  // const pagesize = 100;
-  // let continueloop = true;
-
-  // console.log("Getting playlist tracks for ID ", req.query.id);
-  // spotifyApi.setAccessToken(req.query.access_token);
-
-  // // Get a playlist's tracks
-  // spotifyApi.getPlaylistTracks(req.query.id, { pagesize: pagesize, offset: offset })
-  // .then(function(data) {
-
-  //   // TODO error handling if user ID invalid
-  //   let trackTotal = data.body;
-  //   console.log('Retrieved tracks COUNT: ', trackTotal.total);
-  //   console.log(trackTotal);
-
-  //   // Set all track names
-  //   for (var i = 0; i < trackTotal.items.length; i++) {
-  //     trackObj = 
-  //       {
-  //         trackName: trackTotal.items[i].track.name,
-  //         artist: trackTotal.items[i].track.artists[0].name //TODO can be more than 1 artist
-  //       };
-  //       trackArr.push(trackObj);
-  //   }
-
-  //   // return new data to html
-  //   res.send({
-  //     'tracks': trackArr
-  //   })
-
-  // },function(err) {
-  //   console.log('Something went wrong!', err);
-  // });
 })
 
 /**
